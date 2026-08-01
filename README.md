@@ -49,7 +49,8 @@ smallest page count it could actually reach. It will not silently ship 6pt type.
 | verb | does |
 |---|---|
 | `render IN.md -o OUT.pdf` | source → fitted PDF |
-| `preview OUT.pdf` | → PNG page images (so an agent can *look* at the page) |
+| `check IN.md` | lint for the traps that cost paper (run this first) |
+| `preview OUT.pdf --contact` | → PNG page images + one tiled contact sheet |
 | `send OUT.pdf` | → printer via CUPS |
 | `go IN.md` | render + preview in one move; `--print` to also send |
 | `printers`, `themes` | what's available |
@@ -76,9 +77,13 @@ Plain markdown, plus:
 
 - `> NOTE:` / `> GO:` / `> WARN:` heading a blockquote → labelled callout panel
 - `<!--steps-->` before an ordered list → numbered pills
-- classes: `ps-note` `ps-warn` `ps-go` `ps-specs` `ps-grid-2|-3` `ps-cut`
-  `ps-keep` `ps-break` `ps-fence`; IHD adds `ps-field` `ps-rule-line`
-  `ps-approval` `ps-seal`
+- classes: `ps-note` `ps-warn` `ps-go` `ps-specs` `ps-cut` `ps-keep` `ps-break`
+  `ps-fence`; IHD adds `ps-field` `ps-rule-line` `ps-approval` `ps-seal`
+- **card sheets:** `<div class="ps-cards" data-per="3">` … `</div>` +
+  `<!--/ps-cards-->`. Write flat cards; the engine chunks them into rows that
+  break across pages. Do **not** reach for `display: grid` — WeasyPrint will not
+  fragment a grid, and a long run of inline-blocks fragments badly too. Both
+  mistakes cost this project half-blank pages before `ps-cards` existed.
 
 **If you write custom CSS, express sizes as `calc(X * var(--ps-scale))`.**
 Hard-coded `mm` opts that element out of fitting — see

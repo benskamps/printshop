@@ -102,7 +102,71 @@ def cmd_preview(a) -> int:
     print(f"✓ {len(pngs)} page image(s) at {a.dpi}dpi:")
     for p in pngs:
         print(f"  {p}")
+
+    # A multi-page doc costs one Read per page to inspect, which is how an agent
+    # ends up shipping page 4 unseen. Tile them into one sheet instead.
+    if getattr(a, "contact", False) and len(pngs) > 1:
+        sheet = _contact_sheet(pngs, outdir / f"{pdf.stem}-contact.png")
+        print(f"  → contact sheet: {sheet}")
     return 0
+
+
+def _contact_sheet(pngs: list[Path], out: Path, cols: int = 3, pad: int = 14) -> Path:
+    from PIL import Image, ImageDraw
+
+    ims = [Image.open(p).convert("RGB") for p in pngs]
+    w = max(i.width for i in ims)
+    h = max(i.height for i in ims)
+    rows = (len(ims) + cols - 1) // cols
+    cols = min(cols, len(ims))
+    sheet = Image.new("RGB", (cols * w + pad * (cols + 1),
+                              rows * (h + 18) + pad * (rows + 1)), "#d8d8d8")
+    d = ImageDraw.Draw(sheet)
+    for n, im in enumerate(ims):
+        r, c = divmod(n, cols)
+        x = pad + c * (w + pad)
+        y = pad + r * (h + 18 + pad)
+        sheet.paste(im, (x, y))
+        d.rectangle([x, y, x + im.width, y + im.height], outline="#9a9a9a")
+        d.text((x + 2, y + im.height + 4), f"page {n + 1}", fill="#333")
+    sheet.save(out, "PNG", optimize=True)
+    return out
+
+
+def cmd_check(a) -> int:
+    from .check import check as run_check
+
+    src = Path(a.input).expanduser().resolve()
+    if not src.exists():
+        print(f"printshop: no such file: {src}", file=sys.stderr)
+        return 2
+
+    html_tpl, meta = _doc.build_html(src)
+    target = a.fit if a.fit is not None else meta.get("fit")
+    target = int(target) if target not in (None, False, "none") else None
+
+    res = None
+    if target:
+        cols = meta.get("columns", "auto")
+        res = solve(lambda s, c: _render(html_tpl, s, c, None), target, cols,
+                    fill=bool(meta.get("fill", False)))
+
+    problems, notes = run_check(src, meta, html_tpl, res)
+
+    if res:
+        print(f"  fit: {res.summary()}")
+    for n in notes:
+        print(f"  · {n}")
+    for level, msg in problems:
+        print(f"  {'✗' if level == 'ERROR' else '!'} {level}: {msg}")
+
+    errors = sum(1 for l, _ in problems if l == "ERROR")
+    warns = len(problems) - errors
+    if not problems:
+        print(f"✓ {src.name} — clean")
+    else:
+        print(f"{'✗' if errors else '!'} {src.name} — {errors} error(s), {warns} warning(s)")
+    return 1 if errors else 0
 
 
 def cmd_send(a) -> int:
@@ -176,7 +240,8 @@ def cmd_go(a) -> int:
         return rc
     src = Path(a.input).expanduser().resolve()
     out = Path(a.output).expanduser() if a.output else src.with_suffix(".pdf")
-    pa = argparse.Namespace(input=str(out), outdir=a.outdir, dpi=a.dpi)
+    pa = argparse.Namespace(input=str(out), outdir=a.outdir, dpi=a.dpi,
+                            contact=getattr(a, "contact", True))
     cmd_preview(pa)
     if a.print:
         sa = argparse.Namespace(input=str(out), printer=a.printer, copies=a.copies,
@@ -213,7 +278,14 @@ def main(argv=None) -> int:
     p.add_argument("input")
     p.add_argument("--outdir")
     p.add_argument("--dpi", type=int, default=80)
+    p.add_argument("--contact", action="store_true",
+                   help="also tile every page into one contact sheet")
     p.set_defaults(func=cmd_preview)
+
+    c = sub.add_parser("check", help="lint a source doc for the traps that cost paper")
+    c.add_argument("input")
+    c.add_argument("--fit", type=int, default=None)
+    c.set_defaults(func=cmd_check)
 
     s = sub.add_parser("send", help="PDF -> printer")
     s.add_argument("input")
@@ -230,6 +302,7 @@ def main(argv=None) -> int:
     _add_render_args(g)
     g.add_argument("--outdir")
     g.add_argument("--dpi", type=int, default=80)
+    g.add_argument("--contact", action="store_true", default=True)
     g.add_argument("--print", action="store_true")
     g.add_argument("-d", "--printer")
     g.add_argument("-n", "--copies", type=int, default=1)

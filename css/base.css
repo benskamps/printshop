@@ -236,10 +236,57 @@ ol.ps-steps > li > p:first-child > strong:first-child { display: block; }
 /* fold marks for a tri-fold or half-fold sheet */
 .ps-fold-mark { position: fixed; left: 0; width: 4mm; border-top: 0.4pt solid #b8bcc2; }
 
-/* generic grid for card sheets (N-up on one page) */
+/* generic grid for card sheets — SINGLE PAGE ONLY, see .ps-cards below */
 .ps-grid { display: grid; gap: calc(var(--ps-unit) * 0.7); }
 .ps-grid-2 { grid-template-columns: 1fr 1fr; }
 .ps-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* ── card sheets that cross pages ──────────────────────────────────────── *
+ * Two things WeasyPrint will not do, both learned the hard way on the Den
+ * exhibition catalogue (2026-08-01):
+ *
+ *   1. It will not fragment a CSS grid across a page. A 13-item grid becomes
+ *      one unbreakable box and shunts a half-blank sheet ahead of itself.
+ *   2. It will not reliably fragment a long run of inline-block line boxes
+ *      either, and ragged item heights make one enormous row per page.
+ *
+ * So: `.ps-cards[data-per=N]` gets chunked into explicit `.ps-row` blocks by
+ * the engine (doc.py), because plain blocks DO break between each other. Write
+ * flat `.ps-card` children and let the chunking happen — do not hand-roll rows,
+ * and do not reach for .ps-grid when the content might exceed one page.
+ *
+ * Give cards a fixed-height element (`.ps-card-frame`) when their natural
+ * heights are ragged; uniform rows pack, ragged rows waste half a page.
+ */
+.ps-cards { font-size: 0; }
+.ps-row {
+  font-size: 0;
+  break-inside: avoid;
+  margin-bottom: calc(var(--ps-unit) * 0.8);
+}
+.ps-row:last-child { margin-bottom: 0; }
+.ps-card {
+  display: inline-block;
+  vertical-align: top;
+  font-size: var(--ps-fs);
+  break-inside: avoid;
+  width: 100%;
+}
+.ps-per-2 .ps-card { width: 48.5%; }
+.ps-per-3 .ps-card { width: 31.3%; }
+.ps-per-4 .ps-card { width: 23.1%; }
+.ps-per-2 .ps-card + .ps-card,
+.ps-per-3 .ps-card + .ps-card { margin-left: 3%; }
+.ps-per-4 .ps-card + .ps-card { margin-left: 2.5%; }
+
+.ps-card-frame {
+  height: var(--ps-frame, calc(30mm * var(--ps-scale)));
+  background: var(--wash);
+  border: 0.4pt solid var(--rule);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.ps-card-frame img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 
 /* explicit breaks the author can reach for */
 .ps-break   { break-before: page; }

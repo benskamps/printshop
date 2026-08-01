@@ -134,6 +134,105 @@ def test_solo_sheet_drops_the_page_counter(tmp_path):
     assert "page 1 of 1" not in txt.lower()
 
 
+# ── card sheets ────────────────────────────────────────────────────────────
+def _cards_doc(n, per):
+    cards = "".join(f'<div class="ps-card"><div class="inner">{i}</div></div>' for i in range(n))
+    return (f'---\ntitle: T\n---\n<div class="ps-cards" data-per="{per}">'
+            f"{cards}</div>\n<!--/ps-cards-->\n")
+
+
+def test_cards_are_chunked_into_rows(tmp_path):
+    """WeasyPrint fragments neither grids nor long inline-block runs, so the
+    engine builds explicit rows. Blocks break between each other; rows don't."""
+    src = tmp_path / "c.md"
+    src.write_text(_cards_doc(5, 3))
+    html, _ = D.build_html(src)
+    assert 'class="ps-cards ps-per-3"' in html
+    assert html.count('<div class="ps-row">') == 2      # 3 + 2
+    assert html.count('class="ps-card"') == 5
+
+
+def test_card_chunking_respects_nested_divs(tmp_path):
+    """A naive regex split would cut cards open at their inner </div>."""
+    src = tmp_path / "c.md"
+    src.write_text(_cards_doc(4, 2))
+    html, _ = D.build_html(src)
+    assert html.count('<div class="ps-row">') == 2
+    for i in range(4):
+        assert f'<div class="ps-card"><div class="inner">{i}</div></div>' in html
+
+
+def test_exact_multiple_makes_no_ragged_row(tmp_path):
+    src = tmp_path / "c.md"
+    src.write_text(_cards_doc(6, 3))
+    html, _ = D.build_html(src)
+    assert html.count('<div class="ps-row">') == 2
+
+
+# ── the checker ────────────────────────────────────────────────────────────
+def test_check_flags_fixed_length_that_opts_out_of_fitting():
+    from printshop.check import lint_css
+    bad = lint_css(".a { height: 30mm; }", "css")
+    assert any("fixed length" in m for _, m in bad)
+
+
+def test_check_accepts_scale_aware_length():
+    from printshop.check import lint_css
+    assert lint_css(".a { height: calc(30mm * var(--ps-scale)); }", "css") == []
+
+
+def test_check_ignores_hairlines_and_tracking():
+    """Borders and letter-spacing don't drive density; flagging them is noise."""
+    from printshop.check import lint_css
+    css = ".a { border: 0.4pt solid #000; letter-spacing: 0.16em; border-radius: 2pt; }"
+    assert lint_css(css, "css") == []
+
+
+def test_check_warns_on_grid():
+    from printshop.check import lint_css
+    out = lint_css(".a { display: grid; }", "css")
+    assert any("fragment a grid" in m for _, m in out)
+
+
+def test_check_catches_a_missing_image(tmp_path):
+    from printshop.check import check
+    src = tmp_path / "s.md"
+    src.write_text('---\ntitle: T\n---\n<img src="nope-does-not-exist.png">\n')
+    html, meta = D.build_html(src)
+    problems, _ = check(src, meta, html, None)
+    assert any(l == "ERROR" and "image not found" in m for l, m in problems)
+
+
+def test_check_errors_when_the_fit_target_is_unreachable():
+    from printshop.check import check
+    from printshop.fit import solve
+    r = solve(lambda s, c: 3, target=1, columns=1)
+    problems, _ = check(Path("x.md"), {}, "", r)
+    assert any(l == "ERROR" for l, _ in problems)
+
+
+def test_check_warns_when_type_gets_too_small():
+    from printshop.check import check
+    from printshop.fit import solve
+    r = solve(lambda s, c: 1 if s <= 0.60 else 2, target=1, columns=1)
+    problems, _ = check(Path("x.md"), {}, "", r)
+    assert any("below the comfortable floor" in m for _, m in problems)
+
+
+def test_contact_sheet_tiles_every_page(tmp_path):
+    from printshop.cli import _contact_sheet
+    from PIL import Image
+    pages = []
+    for i in range(4):
+        p = tmp_path / f"p-{i}.png"
+        Image.new("RGB", (60, 80), "white").save(p)
+        pages.append(p)
+    out = _contact_sheet(pages, tmp_path / "contact.png", cols=3)
+    assert out.exists()
+    im = Image.open(out)
+    assert im.width > 60 and im.height > 80 * 2      # 2 rows for 4 pages at 3 cols
+
+
 def test_scale_actually_changes_the_rendered_size(tmp_path):
     """If a theme stops using var(--ps-scale) the solver becomes a no-op that
     still reports success. Guard the mechanism itself."""

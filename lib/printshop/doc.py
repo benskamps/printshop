@@ -125,6 +125,52 @@ def _sugar(body: str) -> str:
     return body
 
 
+def _split_top_level_divs(inner: str) -> list[str]:
+    """Split a fragment into its top-level <div>…</div> children, depth-aware.
+
+    Regex alone can't do this — cards nest divs — so walk the tags and track
+    depth. Anything outside a top-level div (stray whitespace) is dropped.
+    """
+    out, depth, start = [], 0, None
+    for m in re.finditer(r"<(/?)div\b[^>]*>", inner, re.I):
+        closing = bool(m.group(1))
+        if not closing:
+            if depth == 0:
+                start = m.start()
+            depth += 1
+        else:
+            depth -= 1
+            if depth == 0 and start is not None:
+                out.append(inner[start:m.end()])
+                start = None
+    return out
+
+
+def _chunk_cards(body: str) -> str:
+    """`<div class="ps-cards" data-per="N">` → flat cards wrapped in N-wide rows.
+
+    WeasyPrint fragments neither a CSS grid nor a long run of inline-blocks
+    cleanly across pages, but it does break between sibling blocks. So the
+    author writes flat `.ps-card` children and the engine builds the rows.
+    See the long note in css/base.css.
+    """
+    pat = re.compile(r'<div class="ps-cards"([^>]*)>(.*?)</div>\s*<!--/ps-cards-->',
+                     re.S | re.I)
+
+    def repl(m: re.Match) -> str:
+        attrs, inner = m.group(1), m.group(2)
+        per_m = re.search(r'data-per=["\']?(\d+)', attrs)
+        per = max(1, int(per_m.group(1))) if per_m else 2
+        cards = _split_top_level_divs(inner)
+        if not cards:
+            return m.group(0)
+        rows = ["".join(cards[i:i + per]) for i in range(0, len(cards), per)]
+        body = "".join(f'<div class="ps-row">{r}</div>' for r in rows)
+        return f'<div class="ps-cards ps-per-{per}">{body}</div>'
+
+    return pat.sub(repl, body)
+
+
 def build_html(src: Path, overrides: dict | None = None) -> tuple[str, dict]:
     raw = src.read_text(encoding="utf-8")
     meta, body_src = split_front_matter(raw)
@@ -134,6 +180,7 @@ def build_html(src: Path, overrides: dict | None = None) -> tuple[str, dict]:
         body = body_src
     else:
         body = _sugar(md_to_html(body_src))
+    body = _chunk_cards(body)
 
     theme = str(meta.get("theme", "field-guide"))
     paper = PAPERS.get(str(meta.get("paper", "letter")).lower(), str(meta.get("paper", "letter")))

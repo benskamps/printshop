@@ -23,10 +23,19 @@ too much content — it is one unmeasured guess about type size, repeated.
 | verb | does |
 |---|---|
 | `render IN.md -o OUT.pdf` | source → fitted PDF |
-| `preview OUT.pdf` | → PNG page images. **Look at them.** |
+| `check IN.md` | lint for the traps that cost paper — **run this first** |
+| `preview OUT.pdf --contact` | → PNG page images (+ one tiled contact sheet). **Look at them.** |
 | `send OUT.pdf` | → printer via CUPS |
 | `go IN.md` | render + preview in one move (`--print` to also send) |
 | `printers` / `themes` | what's available |
+
+`check` catches what the solver cannot: custom CSS that quietly opted out of
+fitting, `<img>` paths that resolve to nothing, a fit target that can't be met,
+and type that fell below the readable floor. It exits non-zero on errors.
+
+`preview --contact` tiles every page into one image, so a multi-page document
+costs one Read to inspect instead of one per page. That is how a page nobody
+looked at ends up on paper.
 
 ## The workflow that actually works
 
@@ -71,8 +80,35 @@ Plain markdown works. These add design without leaving markdown:
   each item as `**Title** — body`; the separator dash is removed automatically.
 - Tables are dense and cheap. Prefer a table over a bulleted list of pairs.
 - Raw HTML with these classes: `ps-note` `ps-warn` `ps-go` `ps-specs`
-  `ps-grid ps-grid-2|-3` `ps-cut` `ps-keep` `ps-break` `ps-fence`.
+  `ps-cut` `ps-keep` `ps-break` `ps-fence`.
   IHD theme adds `ps-field` `ps-rule-line` `ps-approval` `ps-seal`.
+
+### Card sheets — use `ps-cards`, not a grid
+
+For a repeating sheet (tags, cards, plates, labels) write **flat cards** and let
+the engine chunk them into rows:
+
+```html
+<div class="ps-cards" data-per="3">
+<div class="ps-card">…</div>
+<div class="ps-card">…</div>
+…
+</div>
+<!--/ps-cards-->
+```
+
+The trailing `<!--/ps-cards-->` marker is **required** — without it nothing
+chunks and `check` will tell you so.
+
+Why it matters: WeasyPrint will **not fragment a CSS grid across a page**, and
+will not reliably fragment a long run of inline-blocks either. A 13-item grid
+becomes one unbreakable box that shunts half a blank sheet ahead of itself. The
+engine emits explicit `.ps-row` blocks instead, because plain blocks *do* break
+between each other. `.ps-grid` still exists but is safe **only** when the whole
+sheet fits on one page.
+
+Give cards a `ps-card-frame` (fixed height, `object-fit: contain`) when their
+natural heights are ragged — uniform rows pack, ragged rows waste half a page.
 
 ## Reading the fit result
 
