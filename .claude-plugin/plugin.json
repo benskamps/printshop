@@ -1,0 +1,10 @@
+{
+  "name": "printshop",
+  "version": "0.1.0",
+  "description": "Write a page, fit it, look at it, print it. Markdown in, a fitted PDF out, on the paper you actually own.",
+  "author": {
+    "name": "Broken Branch",
+    "url": "https://brokenbranch.dev"
+  },
+  "keywords": ["print", "pdf", "paper", "layout", "cups", "weasyprint"]
+}

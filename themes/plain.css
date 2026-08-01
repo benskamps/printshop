@@ -1,0 +1,22 @@
+/* plain — no house voice, maximum density. For reference sheets you tape to a
+ * wall and read at arm's length: no ornament, tight rules, everything earns its
+ * millimetre. This is the theme to reach for when the answer to "why is this
+ * four pages" is "because it was decorated."
+ */
+:root {
+  --ink: #000; --ink-2: #333; --ink-3: #666;
+  --rule: #999; --rule-2: #d5d5d5; --wash: #f0f0f0; --accent: #000;
+  --ps-lh: 1.32;
+  --ps-gap: 7.6pt;
+}
+body { font-family: var(--ps-sans); }
+h1, h2, h3 { font-family: var(--ps-sans); font-weight: 700; letter-spacing: -0.01em; }
+h1 { font-size: calc(var(--ps-fs) * 1.7); }
+h2 { font-size: calc(var(--ps-fs) * 1.1); text-transform: none;
+     border-bottom: 1pt solid #000; margin-top: calc(var(--ps-unit) * 0.9); }
+h3 { font-size: calc(var(--ps-fs) * 0.98); }
+.ps-masthead .ps-dek { font-family: var(--ps-sans); font-style: normal; }
+.ps-masthead .ps-bar { border-top: 2pt solid #000; }
+.ps-masthead .ps-bar::after { content: none; }
+ol.ps-steps > li::before { background: #000; }
+.ps-note, .ps-go, .ps-warn { background: none; }

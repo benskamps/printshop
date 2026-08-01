@@ -1,0 +1,116 @@
+/* ihd — Inter-House Department. "Synergizing Domestic Excellence Through
+ * Strategic Alignment."
+ *
+ * Per the IHD template canon (docs/templates/ in the IHD repo): typewriter caps
+ * for official labels, ruled lines and grid sections — never card-based UI
+ * styling — generous whitespace, and the laurel ring as the dominant framing
+ * device. Tone is mock-official, not playful-chaotic: it should read as though
+ * the household took paperwork far too seriously and then kept going.
+ *
+ * The seal is embedded by the `seal: true` front-matter key.
+ */
+:root {
+  --ink:    #101010;
+  --ink-2:  #34343a;
+  --ink-3:  #6a6a70;
+  --accent: #101010;
+  --rule:   #101010;
+  --rule-2: #b9b9be;
+  --wash:   #f0efec;
+  --ps-lh: 1.38;
+}
+
+body { font-family: var(--ps-serif); }
+
+/* Official paperwork gets a border. It is a form, and forms have edges. */
+@page {
+  margin: 15mm;
+  @bottom-center {
+    content: "Officially unofficial record of household operations";
+    font-family: var(--ps-mono); font-size: 6pt; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #7a7a80; padding-top: 4mm;
+  }
+  @bottom-left  { content: ""; }
+  @bottom-right { content: counter(page) " / " counter(pages);
+                  font-family: var(--ps-mono); font-size: 6pt;
+                  letter-spacing: 0.16em; color: #7a7a80; padding-top: 4mm; }
+}
+
+h1 {
+  font-family: var(--ps-mono); font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: calc(var(--ps-fs) * 1.85);
+}
+h2 {
+  font-family: var(--ps-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  font-size: calc(var(--ps-fs) * 0.86);
+  border-bottom: 1.2pt solid var(--ink);
+  padding-bottom: calc(var(--ps-unit) * 0.22);
+}
+h3 { font-family: var(--ps-serif); font-weight: 700; font-style: italic;
+     font-size: calc(var(--ps-fs) * 1.04); }
+h4 { color: var(--ink-2); }
+
+/* The masthead is a letterhead. Double rule, centered, seal above. */
+.ps-masthead { text-align: center; }
+.ps-masthead .ps-kicker {
+  font-family: var(--ps-mono); letter-spacing: 0.34em; color: var(--ink);
+  font-size: calc(var(--ps-fs) * 0.62);
+}
+.ps-masthead .ps-dek {
+  font-style: italic; color: var(--ink-2);
+  font-size: calc(var(--ps-fs) * 0.98);
+}
+.ps-masthead .ps-bar { border-top: 2.6pt solid var(--ink); }
+.ps-masthead .ps-bar::after { border-top: 0.8pt solid var(--ink); margin-top: 2pt; }
+
+.ps-seal { display: block; margin: 0 auto calc(var(--ps-unit) * 0.3) auto;
+           height: calc(var(--ps-unit) * 5.2); }
+.ps-seal-sm { height: calc(var(--ps-unit) * 2.6); }
+
+/* Ruled fill-in lines — the heart of an IHD form. */
+.ps-rule-line {
+  display: block; border-bottom: 0.9pt solid var(--ink);
+  height: calc(var(--ps-unit) * 1.5);
+  margin-bottom: calc(var(--ps-unit) * 0.3);
+}
+.ps-field { break-inside: avoid; margin-bottom: calc(var(--ps-unit) * 0.35); }
+.ps-field > .ps-field-label {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.62);
+  text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink-2);
+  display: block; margin-bottom: calc(var(--ps-unit) * 0.08);
+}
+
+/* Grid item section, ledger-style — no rounded cards anywhere. */
+table { border-top: 1.4pt solid var(--ink); border-bottom: 1.4pt solid var(--ink); }
+th { font-size: calc(var(--ps-fs) * 0.62); letter-spacing: 0.14em;
+     border-bottom: 0.9pt solid var(--ink); padding-top: calc(var(--ps-unit)*0.25); }
+td { border-bottom: 0.4pt solid var(--rule-2); }
+
+/* Every callout is a stamped notice. */
+.ps-note, .ps-go { border: 0.9pt solid var(--ink); background: none; }
+.ps-warn { border: 2.2pt double var(--ink); background: none; }
+:is(.ps-note,.ps-warn,.ps-go) .ps-label {
+  letter-spacing: 0.2em; color: var(--ink);
+}
+
+ol.ps-steps > li::before {
+  background: none; color: var(--ink); border: 1pt solid var(--ink);
+  border-radius: 0; line-height: calc(var(--ps-unit) * 1.16);
+}
+
+blockquote { font-family: var(--ps-serif); border-left: 2.2pt solid var(--ink); }
+pre, code { background: var(--wash); }
+pre { border-left: 2.2pt solid var(--ink); }
+
+/* Approval block — the little finance department insists. */
+.ps-approval {
+  border: 1.2pt solid var(--ink); padding: calc(var(--ps-unit) * 0.6);
+  margin-top: calc(var(--ps-unit) * 0.8); break-inside: avoid;
+}
+.ps-approval .ps-label {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.62);
+  text-transform: uppercase; letter-spacing: 0.18em;
+  display: block; margin-bottom: calc(var(--ps-unit) * 0.45);
+}

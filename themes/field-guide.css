@@ -1,0 +1,65 @@
+/* field-guide — Broken Branch house style, translated for paper.
+ *
+ * The screen house-style is warm-bark-dark with a lamplight glow. That does not
+ * survive contact with a printer: a full-bleed dark page is 40 minutes of toner
+ * and a warped sheet. So the translation keeps the *structure* of the style —
+ * serif is the human voice, mono is the machine voice, one load-bearing accent,
+ * earthy named roles — and moves the warmth from the background flood into the
+ * rules, the panel tints and the accent. Paper stays paper.
+ */
+:root {
+  --bark:   #241d16;   /* the dark end — text, not backgrounds */
+  --loam:   #4a3f33;
+  --stone:  #7d7367;
+  --ember:  #9c4a1e;   /* the one load-bearing accent */
+  --lichen: #6b7355;
+  --sap:    #f4efe6;   /* warm panel tint — a wash, never a flood */
+
+  --ink:    var(--bark);
+  --ink-2:  var(--loam);
+  --ink-3:  var(--stone);
+  --accent: var(--ember);
+  --rule:   #cbc0b1;
+  --rule-2: #e6ded1;
+  --wash:   var(--sap);
+}
+
+body { font-family: var(--ps-sans); }
+
+h1, h2, h3 { font-family: var(--ps-serif); color: var(--bark); }
+h1 { font-weight: 600; }
+h2 { font-weight: 600; border-bottom-color: var(--rule); }
+
+/* mono is the machine voice: labels, metadata, anything the system said */
+h4, th, .ps-kicker, .ps-label, .ps-specs dt { color: var(--ember); }
+
+.ps-masthead .ps-bar { border-top-color: var(--ember); }
+.ps-masthead .ps-bar::after { border-top-color: var(--bark); }
+.ps-masthead .ps-dek { color: var(--loam); }
+
+/* serif italic = a human aside */
+blockquote { border-left-color: var(--ember); color: var(--loam); }
+
+pre { background: var(--sap); border-left-color: var(--ember); }
+code { background: var(--sap); color: var(--bark); }
+
+ol.ps-steps > li::before { background: var(--ember); }
+
+.ps-note { border-color: var(--rule); background: #fdfcfa; }
+.ps-go   { border-color: var(--lichen); background: #f6f7f2; }
+.ps-go .ps-label { color: var(--lichen); }
+.ps-warn { border-color: var(--ember); background: var(--sap); }
+.ps-warn .ps-label { color: var(--ember); }
+
+th { border-bottom-color: var(--bark); }
+
+a { border-bottom-color: var(--ember); }
+
+/* honesty fence — for the thing that is not yet true */
+.ps-fence {
+  border: 0.9pt dashed var(--stone);
+  padding: calc(var(--ps-unit) * 0.4) calc(var(--ps-unit) * 0.55);
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.8);
+  color: var(--loam); break-inside: avoid;
+  margin-bottom: calc(var(--ps-unit) * 0.55);
+}

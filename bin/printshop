@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# printshop — the launcher. Uses the project's own venv so nothing leaks into system python.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PY="$HERE/.venv/bin/python"
+[ -x "$PY" ] || { echo "printshop: venv missing — run: cd $HERE && uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python weasyprint markdown-it-py pygments" >&2; exit 3; }
+exec env PYTHONPATH="$HERE/lib${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m printshop "$@"

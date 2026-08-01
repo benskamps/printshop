@@ -1,0 +1,265 @@
+/* printshop / base.css — the paged foundation every theme builds on.
+ *
+ * THE ONE IDEA: every size in this file is expressed as a multiple of --ps-scale.
+ * The fit solver rewrites that single number and re-renders until the document
+ * lands on the page count you asked for. Themes MUST keep using calc(... * var(--ps-scale))
+ * or they opt themselves out of fitting.
+ */
+
+/* ── fonts ─────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Fraunces";
+  src: url("../assets/fonts/Fraunces-var.ttf");
+  font-weight: 100 900;
+}
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-Regular.ttf");    font-weight: 400; font-style: normal; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-Italic.ttf");     font-weight: 400; font-style: italic; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-Medium.ttf");     font-weight: 500; font-style: normal; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-Bold.ttf");       font-weight: 700; font-style: normal; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-BoldItalic.ttf"); font-weight: 700; font-style: italic; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/JetBrainsMono-ExtraBold.ttf");  font-weight: 800; font-style: normal; }
+
+/* ── the density system ────────────────────────────────────────────────── */
+:root {
+  --ps-scale: 1;               /* rewritten by the fit solver */
+  --ps-base: 10.2pt;           /* body size at scale 1 */
+  --ps-lh: 1.42;               /* line-height at scale 1; tightens as scale drops */
+  --ps-gap: 9pt;               /* the one spacing unit — everything derives from it */
+
+  --ps-fs:   calc(var(--ps-base) * var(--ps-scale));
+  --ps-unit: calc(var(--ps-gap)  * var(--ps-scale));
+
+  /* Ink. Themes override these; base ships a laser-safe neutral set. */
+  --ink:    #14161a;
+  --ink-2:  #4a4f57;
+  --ink-3:  #7c828c;
+  --rule:   #c8ccd2;
+  --rule-2: #e4e7ea;
+  --wash:   #f2f3f5;
+  --accent: #14161a;
+  --paper:  #ffffff;
+
+  --ps-serif: "Fraunces", "Noto Serif Display", Georgia, serif;
+  --ps-mono:  "JetBrains Mono", "Liberation Mono", monospace;
+  --ps-sans:  "Liberation Sans", "DejaVu Sans", sans-serif;
+}
+
+/* ── page ──────────────────────────────────────────────────────────────── */
+@page {
+  size: var(--ps-paper, letter);
+  margin: var(--ps-margin, 13mm) var(--ps-margin-x, 13mm);
+
+  @bottom-left  { content: var(--ps-footer, ""); font-family: var(--ps-mono);
+                  font-size: 6.4pt; letter-spacing: 0.09em; text-transform: uppercase;
+                  color: #8c9199; padding-top: 3mm; }
+  @bottom-right { content: "page " counter(page) " of " counter(pages);
+                  font-family: var(--ps-mono); font-size: 6.4pt; letter-spacing: 0.09em;
+                  text-transform: uppercase; color: #8c9199; padding-top: 3mm; }
+}
+/* A one-page sheet has no business carrying "page 1 of 1". */
+.ps-solo @page, :root.ps-solo { }
+@page :first { }
+
+html { color: var(--ink); background: var(--paper); }
+body {
+  font-family: var(--ps-sans);
+  font-size: var(--ps-fs);
+  line-height: var(--ps-lh);
+  margin: 0;
+  orphans: 2; widows: 2;
+  -weasy-hyphens: auto;
+}
+
+/* ── flow container: the columns knob the solver also drives ───────────── */
+.ps-flow {
+  column-count: var(--ps-cols, 1);
+  column-gap: calc(var(--ps-unit) * 1.5);
+  column-rule: var(--ps-col-rule, none);
+}
+
+/* ── headings ──────────────────────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  font-family: var(--ps-serif);
+  font-weight: 600;
+  line-height: 1.14;
+  margin: 0 0 calc(var(--ps-unit) * 0.42) 0;
+  break-after: avoid;
+  color: var(--ink);
+}
+h1 { font-size: calc(var(--ps-fs) * 2.15); letter-spacing: -0.015em; }
+h2 {
+  font-size: calc(var(--ps-fs) * 1.24);
+  margin-top: calc(var(--ps-unit) * 1.15);
+  padding-bottom: calc(var(--ps-unit) * 0.2);
+  border-bottom: 0.6pt solid var(--rule);
+}
+h3 { font-size: calc(var(--ps-fs) * 1.02); margin-top: calc(var(--ps-unit) * 0.75); font-weight: 700; }
+h4 {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.74);
+  text-transform: uppercase; letter-spacing: 0.13em; color: var(--ink-2);
+  margin-top: calc(var(--ps-unit) * 0.7); font-weight: 700;
+}
+h1 + p, h2 + p { margin-top: 0; }
+:is(h1,h2,h3,h4):first-child { margin-top: 0; }
+
+/* ── body copy ─────────────────────────────────────────────────────────── */
+p { margin: 0 0 calc(var(--ps-unit) * 0.5) 0; }
+p:last-child { margin-bottom: 0; }
+
+ul, ol { margin: 0 0 calc(var(--ps-unit) * 0.5) 0; padding-left: calc(var(--ps-unit) * 1.35); }
+li { margin-bottom: calc(var(--ps-unit) * 0.16); break-inside: avoid; }
+li > ul, li > ol { margin: calc(var(--ps-unit) * 0.16) 0 0 0; }
+
+strong { font-weight: 700; color: var(--ink); }
+em { font-style: italic; }
+a { color: var(--ink); text-decoration: none; border-bottom: 0.5pt solid var(--rule); }
+
+code {
+  font-family: var(--ps-mono);
+  font-size: 0.88em;
+  background: var(--wash);
+  padding: 0.08em 0.3em;
+  border-radius: 1.5pt;
+}
+pre {
+  font-family: var(--ps-mono);
+  font-size: calc(var(--ps-fs) * 0.82);
+  line-height: 1.36;
+  background: var(--wash);
+  border-left: 1.6pt solid var(--accent);
+  padding: calc(var(--ps-unit) * 0.42) calc(var(--ps-unit) * 0.58);
+  margin: 0 0 calc(var(--ps-unit) * 0.5) 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+blockquote {
+  margin: 0 0 calc(var(--ps-unit) * 0.5) 0;
+  padding-left: calc(var(--ps-unit) * 0.7);
+  border-left: 1.6pt solid var(--rule);
+  color: var(--ink-2);
+  font-family: var(--ps-serif);
+  font-style: italic;
+}
+
+hr { border: none; border-top: 0.6pt solid var(--rule); margin: calc(var(--ps-unit) * 0.8) 0; }
+
+/* ── tables ────────────────────────────────────────────────────────────── */
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: calc(var(--ps-fs) * 0.9);
+  margin: 0 0 calc(var(--ps-unit) * 0.55) 0;
+  break-inside: avoid;
+}
+th {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.68);
+  text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+  text-align: left; color: var(--ink-2);
+  border-bottom: 1.1pt solid var(--ink); padding: 0 calc(var(--ps-unit)*0.3) calc(var(--ps-unit)*0.22) 0;
+}
+td { padding: calc(var(--ps-unit)*0.24) calc(var(--ps-unit)*0.3) calc(var(--ps-unit)*0.24) 0;
+     border-bottom: 0.5pt solid var(--rule-2); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+
+/* ── components ────────────────────────────────────────────────────────── */
+
+/* masthead — the title block */
+.ps-masthead { break-after: avoid; margin-bottom: calc(var(--ps-unit) * 0.85); }
+.ps-masthead .ps-kicker {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.66);
+  text-transform: uppercase; letter-spacing: 0.19em; color: var(--accent);
+  font-weight: 700; margin-bottom: calc(var(--ps-unit) * 0.28);
+}
+.ps-masthead h1 { margin-bottom: calc(var(--ps-unit) * 0.18); }
+.ps-masthead .ps-dek {
+  font-family: var(--ps-serif); font-style: italic;
+  font-size: calc(var(--ps-fs) * 1.02); color: var(--ink-2);
+}
+.ps-masthead .ps-bar { border-top: 2.4pt solid var(--accent); margin-top: calc(var(--ps-unit) * 0.45); }
+.ps-masthead .ps-bar::after {
+  content: ""; display: block; border-top: 0.6pt solid var(--accent); margin-top: 1.6pt;
+}
+
+/* callout — note / warn / go */
+.ps-note, .ps-warn, .ps-go {
+  break-inside: avoid;
+  padding: calc(var(--ps-unit) * 0.44) calc(var(--ps-unit) * 0.6);
+  margin: 0 0 calc(var(--ps-unit) * 0.55) 0;
+  font-size: calc(var(--ps-fs) * 0.94);
+}
+.ps-note { border: 0.9pt solid var(--rule); background: #fafbfc; }
+.ps-go   { border: 1.5pt solid var(--ink-2); background: #f6f7f8; }
+.ps-warn { border: 2.2pt solid var(--ink); background: var(--wash); }
+:is(.ps-note,.ps-warn,.ps-go) > :first-child { margin-top: 0; }
+:is(.ps-note,.ps-warn,.ps-go) > :last-child  { margin-bottom: 0; }
+:is(.ps-note,.ps-warn,.ps-go) .ps-label {
+  font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.66);
+  text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+  display: block; margin-bottom: calc(var(--ps-unit) * 0.2);
+}
+
+/* numbered steps — the workhorse for guides */
+ol.ps-steps { list-style: none; padding-left: 0; counter-reset: ps-step; }
+ol.ps-steps > li {
+  counter-increment: ps-step;
+  padding-left: calc(var(--ps-unit) * 1.7);
+  position: relative;
+  margin-bottom: calc(var(--ps-unit) * 0.42);
+  break-inside: avoid;
+}
+ol.ps-steps > li::before {
+  content: counter(ps-step);
+  position: absolute; left: 0; top: 0.02em;
+  width: calc(var(--ps-unit) * 1.28); height: calc(var(--ps-unit) * 1.28);
+  background: var(--accent); color: var(--paper);
+  font-family: var(--ps-mono); font-weight: 700;
+  font-size: calc(var(--ps-fs) * 0.74);
+  line-height: calc(var(--ps-unit) * 1.28);
+  text-align: center; border-radius: 50%;
+}
+ol.ps-steps > li > strong:first-child,
+ol.ps-steps > li > p:first-child > strong:first-child { display: block; }
+
+/* key-value spec grid — dense facts without table chrome */
+.ps-specs { display: grid; grid-template-columns: auto 1fr; gap: calc(var(--ps-unit)*0.2) calc(var(--ps-unit)*0.6);
+            font-size: calc(var(--ps-fs) * 0.92); margin-bottom: calc(var(--ps-unit) * 0.55); }
+.ps-specs dt { font-family: var(--ps-mono); font-size: calc(var(--ps-fs) * 0.7);
+               text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3);
+               padding-top: 0.22em; white-space: nowrap; }
+.ps-specs dd { margin: 0; }
+
+/* cut lines — for tags, cards, bookmarks */
+.ps-cut { border: 0.5pt dashed var(--ink-3); padding: calc(var(--ps-unit) * 0.7); break-inside: avoid; }
+
+/* fold marks for a tri-fold or half-fold sheet */
+.ps-fold-mark { position: fixed; left: 0; width: 4mm; border-top: 0.4pt solid #b8bcc2; }
+
+/* generic grid for card sheets (N-up on one page) */
+.ps-grid { display: grid; gap: calc(var(--ps-unit) * 0.7); }
+.ps-grid-2 { grid-template-columns: 1fr 1fr; }
+.ps-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* explicit breaks the author can reach for */
+.ps-break   { break-before: page; }
+.ps-keep    { break-inside: avoid; }
+.ps-nobreak { break-after: avoid; }
+
+/* ── printer profiles ──────────────────────────────────────────────────── *
+ * Earned 2026-07-31 on this box: a big solid flood is the worst thing you can
+ * hand a struggling inkjet — it soaks, cockles the paper and bleeds into
+ * reversed-out type. The laser eats it happily. So profile is real, not decor.
+ */
+:root.ps-inkjet {
+  --wash: #f6f7f8;      /* lighter fills — less soak */
+  --rule: #b4b9c0;      /* darker rules — thin grey inkjet ink prints faint */
+}
+:root.ps-inkjet :is(.ps-warn) { background: #f4f5f6; }
+:root.ps-inkjet ol.ps-steps > li::before { background: none; color: var(--ink);
+  border: 1.2pt solid var(--ink); line-height: calc(var(--ps-unit) * 1.14); }
+
+:root.ps-mono {
+  --accent: #000; --ink: #000; --ink-2: #3a3a3a; --ink-3: #5c5c5c;
+  --rule: #9a9a9a; --rule-2: #cfcfcf; --wash: #efefef;
+}
