@@ -60,7 +60,15 @@ def cmd_render(a) -> int:
 
     html_tpl, meta = _doc.build_html(src, overrides)
 
-    out = Path(a.output).expanduser() if a.output else src.with_suffix(".pdf")
+    missing = _doc.missing_plates(meta)
+    if missing:
+        for p in missing:
+            print(f"printshop: plate not found: {p}", file=sys.stderr)
+        print("printshop: refusing to print a blank margin — fix `plates:` "
+              "(paths are relative to the document)", file=sys.stderr)
+        return 2
+
+    out =Path(a.output).expanduser() if a.output else src.with_suffix(".pdf")
     out.parent.mkdir(parents=True, exist_ok=True)
 
     target = a.fit if a.fit is not None else meta.get("fit")

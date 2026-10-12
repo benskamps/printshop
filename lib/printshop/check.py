@@ -74,6 +74,13 @@ def check(src: Path, meta: dict, html: str, fit_result=None) -> tuple[list, list
         if not (base / ref).resolve().exists():
             problems.append(("ERROR", f"image not found: {ref}"))
 
+    # A plate that resolves to nothing leaves a blank 33mm margin — the exact
+    # silent failure that made `plates:` worth building.
+    from .doc import missing_plates
+    for p in missing_plates(meta):
+        problems.append(("ERROR", f"plate not found: {p} (plate paths are relative "
+                                  f"to {src.parent})"))
+
     # ps-cards without the closing marker silently never chunks.
     opens = len(re.findall(r'<div class="ps-cards"', html))
     if opens:

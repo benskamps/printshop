@@ -68,8 +68,22 @@ profile: laser           # laser | inkjet | mono
 fit:     1               # the important knob
 columns: auto            # auto | 1 | 2 | 3
 fill:    false           # let type grow past 100% to fill a short page
+plates:  [art/ginkgo.png, art/rose.png]   # margin art, one per page, cycling
 ---
 ```
+
+## Margin plates
+
+`plates:` hangs one engraving per page in the side margin: plate 1 on page 1,
+plate 2 on page 2, and round again (`@page :nth(Kn+i)`), so the list never has
+to match the page count. Paths are relative to the document. A missing plate is
+an `ERROR` in `check` and `render` refuses, because the old failure here was a
+silently blank margin. Knobs: `plate-width: 26mm`, `plate-gap: 7mm` (margin =
+width + gap), `plate-side: left | right`. Each plate is sized through
+`image-resolution` from its own pixel width (a margin box cannot be sized any
+other way), so mixed-resolution art all prints the same width. Tall, narrow,
+single-ink art on white works best (9:16, ~1600px tall). The Dead Head Blooms
+sourcing atlas (`~/projects/deadheadblooms-print/`) is the worked example.
 
 ## Authoring
 

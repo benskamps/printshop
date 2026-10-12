@@ -34,9 +34,11 @@ def _coerce(v: str):
 
 
 def split_front_matter(text: str) -> tuple[dict, str]:
-    """Minimal flat YAML front matter — flat `key: value`, plus `key: |` block
-    scalars (which `css:` needs). Deliberately not a YAML parser: staying flat
-    keeps the control surface obvious and the failure modes boring."""
+    """Minimal flat YAML front matter — flat `key: value`, `key: |` block
+    scalars (which `css:` needs), and flat string lists (`key: [a, b]` or
+    `key:` followed by `- a` lines, which `plates:` needs). Deliberately not a
+    YAML parser: staying flat keeps the control surface obvious and the
+    failure modes boring."""
     m = _FM.match(text)
     if not m:
         return {}, text
@@ -67,6 +69,14 @@ def split_front_matter(text: str) -> tuple[dict, str]:
             cut = min(pads) if pads else 0
             joiner = "\n" if v.strip().startswith("|") else " "
             meta[key] = joiner.join(b[cut:] if len(b) >= cut else b for b in block).strip()
+        elif v.strip().startswith("[") and v.strip().endswith("]"):
+            meta[key] = [str(_coerce(x)) for x in v.strip()[1:-1].split(",") if x.strip()]
+        elif not v.strip() and i < len(lines) and lines[i].strip().startswith("- "):
+            items = []
+            while i < len(lines) and lines[i].strip().startswith("- "):
+                items.append(str(_coerce(lines[i].strip()[2:])))
+                i += 1
+            meta[key] = items
         else:
             meta[key] = _coerce(v)
     return meta, text[m.end():]
@@ -171,6 +181,66 @@ def _chunk_cards(body: str) -> str:
     return pat.sub(repl, body)
 
 
+_MM = {"mm": 1.0, "cm": 10.0, "in": 25.4, "pt": 25.4 / 72, "px": 25.4 / 96}
+
+
+def _to_mm(v, default: float) -> float:
+    if v is None:
+        return default
+    m = re.fullmatch(r"\s*(\d*\.?\d+)\s*(mm|cm|in|pt|px)?\s*", str(v))
+    if not m:
+        raise ValueError(f"not a length: {v!r} (write e.g. 26mm)")
+    return float(m.group(1)) * _MM[m.group(2) or "mm"]
+
+
+def _resolve_plates(src: Path, meta: dict) -> list[Path]:
+    plates = meta.get("plates") or []
+    if isinstance(plates, str):
+        plates = [plates]
+    return [(src.parent / Path(str(p)).expanduser()).resolve() for p in plates]
+
+
+def missing_plates(meta: dict) -> list[Path]:
+    return [p for p in meta.get("_plates", []) if not p.is_file()]
+
+
+def plate_css(meta: dict) -> str:
+    """`plates: [...]` → one engraving per page in the side margin, cycling.
+
+    A page margin box cannot be sized, so each plate's width is set through
+    `image-resolution` computed from its own pixel width. URLs are absolute
+    file:// because WeasyPrint's base_url is printshop's css/ dir — a relative
+    path there resolves to nothing and renders a silently empty margin.
+    Plates cycle with `:nth(Kn+i)`, so the list needn't match the page count.
+
+    These lengths are deliberately fixed: page geometry must not scale with
+    type, so this CSS is generated here and never passes through the linter.
+    """
+    plates = meta.get("_plates") or []
+    if not plates:
+        return ""
+    width = _to_mm(meta.get("plate-width"), 26.0)
+    gap = _to_mm(meta.get("plate-gap"), 7.0)
+    side = str(meta.get("plate-side", "left")).lower()
+    if side not in ("left", "right"):
+        raise ValueError(f"plate-side must be left or right, not {side!r}")
+    width_px = width / 25.4 * 96
+
+    out = [f"@page {{ margin-{side}: {width + gap:.2f}mm; }}"]
+    k = len(plates)
+    for i, p in enumerate(plates, 1):
+        if not p.is_file():
+            continue   # check/render report it; never emit a url() to nothing
+        from PIL import Image
+        with Image.open(p) as im:
+            dppx = im.width / width_px
+        out.append(
+            f'@page :nth({k}n+{i}) {{ @{side}-middle {{ content: url("{p.as_uri()}"); '
+            f"image-resolution: {dppx:.4f}dppx; vertical-align: middle; "
+            f"text-align: center; }} }}")
+    return "\n".join(out)
+
+
 def build_html(src: Path, overrides: dict | None = None) -> tuple[str, dict]:
     raw = src.read_text(encoding="utf-8")
     meta, body_src = split_front_matter(raw)
@@ -216,6 +286,8 @@ def build_html(src: Path, overrides: dict | None = None) -> tuple[str, dict]:
         parts.append('<div class="ps-bar"></div></header>')
         masthead = "".join(parts)
 
+    meta["_plates"] = _resolve_plates(src, meta)
+
     base_css = (ROOT / "css" / "base.css").read_text(encoding="utf-8")
     theme_path = ROOT / "themes" / f"{theme}.css"
     theme_css = theme_path.read_text(encoding="utf-8") if theme_path.exists() else ""
@@ -233,6 +305,7 @@ def build_html(src: Path, overrides: dict | None = None) -> tuple[str, dict]:
   --ps-cols: {cols};
   --ps-scale: __PS_SCALE__;
 }}
+{plate_css(meta)}
 {meta.get('css', '')}
 </style></head>
 <body>{masthead}<main class="ps-flow">{body}</main></body></html>"""

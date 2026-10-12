@@ -64,8 +64,15 @@ fill:     false                  # allow type to grow past 100% to fill a short 
 margin:   13mm
 footer:   Broken Branch          # or `false` for none
 masthead: true
+plates:   [art/a.png, art/b.png]  # margin engraving per page, cycles; paths relative to the doc
+plate-width: 26mm                # also plate-gap: 7mm, plate-side: left|right
 ---
 ```
+
+Never hand-write `@page :nth(n) { @left-middle ... }` for margin art. Use
+`plates:`, which computes `image-resolution`, absolute `file://` URLs and the
+margin for you (a relative url() in custom CSS resolves inside printshop's
+`css/` dir and silently prints nothing).
 
 Any front-matter key is overridable on the command line (`--fit`, `--theme`,
 `--paper`, `--profile`, `--columns`, `--margin`, `--fill`).

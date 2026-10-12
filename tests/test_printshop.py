@@ -242,3 +242,85 @@ def test_scale_actually_changes_the_rendered_size(tmp_path):
     big = _render(html, 1.0, 1, None)
     small = _render(html, 0.6, 1, None)
     assert small < big, "--ps-scale had no effect on page count"
+
+
+# ── margin plates ──────────────────────────────────────────────────────────
+# Born from the Dead Head Blooms atlas (2026-10-09): eight hand-written
+# `@page :nth(n) { @left-middle { content: url(...) } }` rules, absolute
+# file:// paths, and a hand-computed image-resolution per plate. A relative
+# path there resolved inside printshop's css/ dir and rendered NOTHING.
+def test_inline_list_front_matter():
+    meta, _ = D.split_front_matter("---\nplates: [a.png, 'b c.png', d.png]\nfit: 2\n---\nx\n")
+    assert meta["plates"] == ["a.png", "b c.png", "d.png"]
+    assert meta["fit"] == 2
+
+
+def test_block_list_front_matter():
+    meta, _ = D.split_front_matter("---\nplates:\n  - a.png\n  - b.png\nfit: 2\n---\nx\n")
+    assert meta["plates"] == ["a.png", "b.png"]
+    assert meta["fit"] == 2
+
+
+def _plate(path, w=400, h=700):
+    from PIL import Image
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (w, h), (79, 107, 58)).save(path)
+    return path
+
+
+def test_plates_resolve_relative_to_the_document(tmp_path):
+    _plate(tmp_path / "art" / "a.png")
+    _plate(tmp_path / "art" / "b.png")
+    src = tmp_path / "s.md"
+    src.write_text("---\ntitle: T\nplates: [art/a.png, art/b.png]\n---\nx\n")
+    html, meta = D.build_html(src)
+    assert (tmp_path / "art" / "a.png").as_uri() in html
+    assert "@page :nth(2n+1)" in html and "@page :nth(2n+2)" in html
+    assert D.missing_plates(meta) == []
+
+
+def _pdfimages(pdf):
+    import subprocess
+    out = subprocess.run(["pdfimages", "-list", str(pdf)], capture_output=True, text=True).stdout
+    rows = [l.split() for l in out.splitlines()[2:] if l.strip()]
+    # page num type width height color comp bpc enc interp object ID x-ppi y-ppi ...
+    return [(int(r[0]), int(r[3]), float(r[12])) for r in rows]
+
+
+def test_plates_land_on_every_page_cycling_and_at_the_set_width(tmp_path):
+    """Two plates, three+ pages: page 3 must get plate 1 again, and every plate
+    must print 26mm wide no matter its pixel width."""
+    _plate(tmp_path / "a.png", w=400, h=700)
+    _plate(tmp_path / "b.png", w=900, h=1600)
+    src = tmp_path / "s.md"
+    src.write_text("---\ntitle: T\nplates: [a.png, b.png]\n---\n"
+                   + ("Lorem ipsum dolor sit amet. " * 900))
+    html, _ = D.build_html(src)
+    out = tmp_path / "s.pdf"
+    pages = _render(html, 1.0, 1, out)
+    assert pages >= 3
+    imgs = _pdfimages(out)
+    assert sorted({p for p, _, _ in imgs}) == list(range(1, pages + 1))
+    by_page = {p: w for p, w, _ in imgs}
+    assert by_page[1] == 400 and by_page[2] == 900 and by_page[3] == 400
+    for _, px, ppi in imgs:
+        assert px / ppi * 25.4 == pytest.approx(26.0, abs=0.3)
+
+
+def test_a_missing_plate_is_an_error_not_a_blank_margin(tmp_path):
+    from printshop.check import check
+    from printshop.cli import main
+    src = tmp_path / "s.md"
+    src.write_text("---\ntitle: T\nplates: [nope.png]\n---\nx\n")
+    html, meta = D.build_html(src)
+    problems, _ = check(src, meta, html, None)
+    assert any(l == "ERROR" and "plate not found" in m for l, m in problems)
+    assert main(["render", str(src), "-o", str(tmp_path / "s.pdf")]) != 0
+    assert not (tmp_path / "s.pdf").exists()
+
+
+def test_no_plates_means_no_plate_css(tmp_path):
+    src = tmp_path / "s.md"
+    src.write_text("---\ntitle: T\n---\nx\n")
+    html, _ = D.build_html(src)
+    assert "@left-middle" not in html
